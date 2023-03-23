@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "django-translate"
+version = "0.1.0"
+description = "Wraps strings with gettext()"
+authors = ["Alar <alarsuu@gmail.com>"]
+readme = "README.md"
+packages = [{include = "django_translate"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.28.2"
+black = "^23.1.0"
+isort = "^5.12.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
