@@ -3,6 +3,8 @@ import os
 DEPL_BASE_URL = "https://api-free.deepl.com/v2/translate"
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY")
 IGNORE_WORDS = [
+    "__main__",
+    "self",
     "None",
     "True",
     "False",
@@ -42,3 +44,13 @@ IGNORE_WORDS = [
     "Harjumaa",
 ]
 PATTERN = r"""(?<![_\.])["']([A-Z][^"']*(?:(?!(?<!\\)["']).)*)["'](?![_\w])"""
+GETTEXT_VARIATIONS = [
+    "gettext",
+    "gettext_lazy",
+    "_",
+    "ugettext",
+    "ugettext_lazy",
+    "ngettext",
+    "ungettext",
+    "ungettext_lazy",
+]

@@ -1,73 +1,76 @@
+import argparse
+import contextlib
 import os
-from typing import Optional
+import re
+from typing import Optional, Union
 
 import libcst as cst
 
+from constants import IGNORE_WORDS, PATTERN
 from deepl_translate import translate
 
 
-class UserFacingStringMatcher(cst.CSTVisitor):
-    METADATA_DEPENDENCIES = (cst.MetadataWrapper,)
-
+class FindUserFacingString(cst.CSTVisitor):
     def __init__(self):
-        super().__init__()
-        self.matched_string = ""
+        self.string = ""
 
-    def visit_Str(self, node):
-        print(node.value)
-        if self.get_metadata(self, node).is_argument:
-            # Ignore strings that are not arguments to functions
+    def visit_SimpleString(self, node: cst.SimpleString) -> Optional[bool]:
+        if not node.value or node.value == '""' or node.value == "''":
             return False
-        if 'self.' in node.value:
-            # Ignore strings that reference attributes, model fields, methods, etc
+
+        if node.value in IGNORE_WORDS:
             return False
-        self.matched_string = node.value
+
+        if re.match(PATTERN, node.value):
+            self.string = node.value
+
+        return False
 
 
 class ReplaceString(cst.CSTTransformer):
-    def __init__(self, old_string: str, new_string: str):
-        super().__init__()
-        self.old_string = old_string
-        self.new_string = new_string
-
-    def leave_Call(self, original_node, updated_node):
-        visitor = UserFacingStringMatcher()
+    def leave_SimpleString(
+        self, original_node: cst.SimpleString, updated_node: cst.SimpleString
+    ) -> Union[cst.SimpleString, cst.Call]:
+        visitor = FindUserFacingString()
         updated_node.visit(visitor)
-        if not visitor.matched_string:
-            return updated_node
-
-        if len(updated_node.args) > 0:
-            return cst.Call(func=(cst.Name(value='gettext')), args=[cst.Arg(cst.Str(updated_node.matched_string))])
-
-
-def translate_file(file_path):
-    with open(file_path, 'r') as f:
-        source_code = f.read()
-
-    module = cst.parse_module(source_code)
-    matcher = UserFacingStringMatcher()
-    module.visit(matcher)
-
-    for node in matcher.matched_strings:
-        # Translate the string and wrap it in either `gettext()` or `gettext_lazy()`
-        translated_string = translate(node.value)
-        if 'models.' in file_path:
-            node.value = f'gettext_lazy("{translated_string}")'
-        else:
-            node.value = f'gettext("{translated_string}")'
-
-    modified_source_code = module.code
-    with open(file_path, 'w') as f:
-        f.write(modified_source_code)
+        if visitor.string:
+            translated_string = visitor.string
+            return cst.Call(
+                func=cst.Name("gettext"),
+                args=[cst.Arg(cst.SimpleString(translated_string))],
+            )
+        return updated_node
 
 
-def translate_directory(directory_path):
-    for dir_path, _, filenames in os.walk(directory_path):
-        for filename in filenames:
-            if filename.endswith('.py'):
-                file_path = os.path.join(dir_path, filename)
-                translate_file(file_path)
+def transform(source: str) -> str:
+    module = cst.parse_module(source)
+    module = module.visit(ReplaceString())
+    return module.code
 
 
-if __name__ == '__main__':
-    translate_directory('/home/alar/workspaces/thorgate/vestman-vaheladu/vaheladu/storage')
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("directory", help="The directory to search for Python files")
+    args = parser.parse_args()
+    py_files = [
+        os.path.join(root, name)
+        for root, dirs, files in os.walk(args.directory)
+        for name in files
+        if name.endswith(".py") and "migrations" not in root
+    ]
+
+    for file in py_files:
+        with open(file, "r+") as f:
+            source_code = f.read()
+
+            # Some strings cause the parser to fail
+            with contextlib.suppress(AttributeError):
+                transformed_code = transform(source_code)
+
+                f.seek(0)
+                f.write(transformed_code)
+                f.truncate()
+
+
+if __name__ == "__main__":
+    main()
