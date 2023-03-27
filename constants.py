@@ -13,6 +13,11 @@ IGNORE_WORDS = [
     "ELVIS",
     "EVR",
     "ID",
+    "Id",
+    "Permissions",
+    "Navision",
+    "UnitId",
+    "ASD123",
     "FSC_COC",
     "FSC_COC/FM",
     "PEFC_COC",
@@ -42,6 +47,7 @@ IGNORE_WORDS = [
     "Thorgate",
     "Tallinn",
     "Harjumaa",
+    "Estonia",
 ]
 PATTERN = r"""(?<![_\.])["']([A-Z][^"']*(?:(?!(?<!\\)["']).)*)["'](?![_\w])"""
 GETTEXT_VARIATIONS = [
