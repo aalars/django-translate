@@ -292,7 +292,6 @@ translations = {
     '"WaybillChangeForm"': '"WaybillChangeForm"',
     '"Kommentaar"': '"Comment"',
     '"{site_name}: {site_company_name} ({user_name}) muutis hakkeoksjoni tähtaega"': '"{site_name}: {site_company_name} ({user_name}) changed the deadline for the auction"',
-
     '"Ühes vahemikus ei või olla üle saja väärtuse: {entry}"': '"There can be no more than one hundred values in a range: {entry}"',
     '"AmountsForm vajab salvestamiseks eelnevalt salvestatud instantsi"': '"AmountsForm needs a previously saved instance for saving"',
     '"Andmed on ostjale nähtavad"': '"The data is visible to the buyer"',
