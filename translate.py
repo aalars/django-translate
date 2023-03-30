@@ -1,7 +1,5 @@
 import argparse
 import ast
-
-# import contextlib
 import os
 import re
 from typing import Optional, Union
@@ -49,7 +47,6 @@ class ReplaceStringWithGettext(cst.CSTTransformer):
         gettext = "gettext_lazy" if self.lazy else "gettext"
         if visitor.string:
             # Some strings cause the parser to fail
-            # with contextlib.suppress(CSTValidationError):
             translated_string = translate(visitor.string)
             TRANSLATIONS[visitor.string] = translated_string
             try:

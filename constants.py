@@ -44,19 +44,8 @@ IGNORE_WORDS = [
     "CompanyAssortment",
     "AssortmentMapping",
     "EE",
-    "Thorgate",
     "Tallinn",
     "Harjumaa",
     "Estonia",
 ]
 PATTERN = r"""(?<![_\.])["']([A-Z][^"']*(?:(?!(?<!\\)["']).)*)["'](?![_\w])"""
-GETTEXT_VARIATIONS = [
-    "gettext",
-    "gettext_lazy",
-    "_",
-    "ugettext",
-    "ugettext_lazy",
-    "ngettext",
-    "ungettext",
-    "ungettext_lazy",
-]
