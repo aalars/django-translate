@@ -2,12 +2,12 @@ Few helpers that somewhat automate the process of translating a Python (Django) 
 
 On high level the process is (with some manual steps in between)
 - Extract the strings to be translated from the code
-- Translate the strings using DeepL Translate API
+- Get the translations from .po file or translate the strings using DeepL Translate API
 - Replace the strings in the code with the translated strings wrapped in `gettext()` or `gettext_lazy()` function
 - Save the translations into a dictionary in the `_translations.py` file
 - Translate the strings in the .po files using the dictionary
 
-## translate.py
+## main.py
 
 Uses `libcst` to parse the Python code and extract the strings to be translated. 
 
@@ -40,10 +40,10 @@ Uses `polib` to parse the .po files and replace the strings with the translated 
 ### Remove potential issues
 
 Run the command for the first time, check logs for errors, revert those changes and fix the errors manually. 
-Commit fixes.
+Commit fixes. Use optional parameter `-p` with path to a `.po` file to first find for translations in tha file.
 
 ```bash
-poetry run python translate.py path/to/your/directory
+poetry run python main.py -d path/to/your/directory -p path/to/your/po/file
 ```
 
 Why? Because `libcst` doesn't handle some strings well, and our code is not so good either. 
@@ -77,3 +77,6 @@ poetry run python update_po.py path/to/your/po/file
 - [ ] Possibly can skip the _translations.py file and just use the .po files
 - [ ] Add tests
 - [ ] Add possibility of a dry run -- gettext linter?
+- [ ] Add imports
+- [ ] Replace _() with respective gettext function
+- [ ] Do not save translations in the dictionary with double quotes, use `ast.literal_eval(string)`
