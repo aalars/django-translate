@@ -25,6 +25,12 @@ translations = {
 }
 ```
 
+If you only want to translate missing strings in .po files, use `-to`/`--translate_only` flag. In order to use different target language than `EN`, use `-l`/`--language` flag.
+
+```bash
+poetry run python main.py -to -l ET -p path/to/your/po/file
+```
+
 ## update_po.py
 
 Uses `polib` to parse the .po files and replace the strings with the translated strings from the `_translations.py` file.
@@ -59,6 +65,8 @@ If you want then you can also improve the `PATTERN` regex in the `constants.py` 
 
 When you are somewhat happy with the results, run the command last time. Manually go over the changes and fix any errors, 
 keeping the translations in the dictionary in sync with the changes. Run `poetry run black .` to format the dictionary.
+
+Run `./manage.py makemessages` to update the .po files.
 
 ### Replace strings in .po files
 

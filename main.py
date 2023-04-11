@@ -9,7 +9,7 @@ import libcst as cst
 from libcst._nodes.base import CSTValidationError
 
 from constants import IGNORE_WORDS, PATTERN
-from translate import translate
+from translate import translate, translate_po_file
 
 TRANSLATIONS = {}
 
@@ -36,10 +36,16 @@ class FindUserFacingString(cst.CSTVisitor):
 
 
 class ReplaceStringWithGettext(cst.CSTTransformer):
-    def __init__(self, lazy: bool = False, inspire_from_po: Union[str, bool] = False):
+    def __init__(
+        self,
+        lazy: bool = False,
+        inspire_from_po: Union[str, bool] = False,
+        target_language: str = "EN",
+    ):
         super().__init__()
         self.lazy = lazy
         self.inspire_from_po = inspire_from_po
+        self.target_language = target_language
 
     def leave_SimpleString(
         self, original_node: cst.SimpleString, updated_node: cst.SimpleString
@@ -49,8 +55,16 @@ class ReplaceStringWithGettext(cst.CSTTransformer):
         gettext = "gettext_lazy" if self.lazy else "gettext"
         if visitor.string:
             # Some strings cause the parser to fail
-            translated_string = translate(visitor.string, self.inspire_from_po)
+            translated_string, language = translate(
+                visitor.string, self.target_language, self.inspire_from_po
+            )
             TRANSLATIONS[visitor.string] = translated_string
+
+            # We do not want to translate string in py files that are already EN
+            # TODO: Put into variable
+            if language == "ET":
+                translated_string = visitor.string
+
             try:
                 print(cst.ensure_type(updated_node, cst.SimpleString).value)
                 return cst.Call(
@@ -64,12 +78,19 @@ class ReplaceStringWithGettext(cst.CSTTransformer):
 
 
 def transform(
-    source: str, lazy: bool = False, inspire_from_po: Union[str, bool] = False
+    source: str,
+    target_language: str,
+    lazy: bool = False,
+    inspire_from_po: Union[str, bool] = False,
 ) -> str:
     module = cst.parse_module(source)
     try:
         module = module.visit(
-            ReplaceStringWithGettext(lazy=lazy, inspire_from_po=inspire_from_po)
+            ReplaceStringWithGettext(
+                lazy=lazy,
+                inspire_from_po=inspire_from_po,
+                target_language=target_language,
+            )
         )
         return module.code
     except AttributeError as e:
@@ -88,8 +109,26 @@ def main():
     parser.add_argument(
         "-p", "--po_file", default=None, help="The .po file to inspire from"
     )
+    parser.add_argument(
+        "-l", "--language", default="EN", help="Translation target language"
+    )
+    parser.add_argument(
+        "-to",
+        "--translate_only",
+        default=False,
+        help="Translates only the given po file",
+        action=argparse.BooleanOptionalAction,
+    )
+
     args = parser.parse_args()
     py_files = []
+
+    if args.translate_only:
+        if not args.po_file:
+            raise ValueError("You must provide a po file to translate")
+
+        translate_po_file(args.po_file, args.language)
+        return
 
     for root, dirs, files in os.walk(args.directory):
         py_files.extend(
@@ -108,7 +147,10 @@ def main():
 
             # Some strings cause the parser to fail
             transformed_code = transform(
-                source_code, lazy=lazy, inspire_from_po=args.po_file
+                source_code,
+                target_language=args.language,
+                lazy=lazy,
+                inspire_from_po=args.po_file,
             )
 
             f.seek(0)
