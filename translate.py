@@ -23,8 +23,10 @@ def get_translation_from_po(text, inspire_from_po):
     Try to get translation from .po file using polib
     """
     po_file = polib.pofile(inspire_from_po)
+
+    txt = ast.literal_eval(text) if ("'" and '"' in text[:2]) else text
     for entry in po_file:
-        if entry.msgstr and entry.msgstr == ast.literal_eval(text):
+        if entry.msgstr and entry.msgstr == txt:
             print("   ↑ Existing in .po file")
             return f"'{entry.msgid}'"
     return None

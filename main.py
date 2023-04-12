@@ -8,7 +8,7 @@ from typing import Optional, Union
 import libcst as cst
 from libcst._nodes.base import CSTValidationError
 
-from constants import IGNORE_WORDS, PATTERN
+from constants import IGNORE_WORDS, PATTERN, PATTERN_IN_HTML
 from translate import translate, translate_po_file
 
 TRANSLATIONS = {}
@@ -54,11 +54,9 @@ class ReplaceStringWithGettext(cst.CSTTransformer):
         updated_node.visit(visitor)
         gettext = "gettext_lazy" if self.lazy else "gettext"
         if visitor.string:
-            # Some strings cause the parser to fail
-            translated_string, language = translate(
+            translated_string, language = get_translation(
                 visitor.string, self.target_language, self.inspire_from_po
             )
-            TRANSLATIONS[visitor.string] = translated_string
 
             # We do not want to translate string in py files that are already EN
             # TODO: Put into variable
@@ -77,13 +75,55 @@ class ReplaceStringWithGettext(cst.CSTTransformer):
         return updated_node
 
 
+def get_translation(string, language, inspire_from_po):
+    translated_string, language = translate(string, language, inspire_from_po)
+    TRANSLATIONS[string] = translated_string
+    return translated_string, language
+
+
+def transform_string_in_html(match, target_language, inspire_from_po):
+    if (
+        (string := match.group(0).strip())
+        and len(string) > 2
+        and ('="' not in string or "='" not in string or "data-" not in string)
+    ):
+        translated_string, language = get_translation(
+            string, target_language, inspire_from_po
+        )
+
+        if language == "ET":
+            translated_string = string
+
+        print(translated_string)
+
+        return '{% trans "' + translated_string + '" %}'
+
+
+def translate_django_templates(source_code, target_language, inspire_from_po):
+    return re.sub(
+        PATTERN_IN_HTML,
+        lambda match: transform_string_in_html(match, target_language, inspire_from_po),
+        source_code,
+    )
+
+
 def transform(
-    source: str,
+    source_code: str,
     target_language: str,
     lazy: bool = False,
     inspire_from_po: Union[str, bool] = False,
+    html_only: bool = False,
 ) -> str:
-    module = cst.parse_module(source)
+    if html_only:
+        try:
+            return translate_django_templates(
+                source_code, target_language, inspire_from_po
+            )
+        except Exception as e:
+            logging.error("Problem with source, fix this manually", e, exc_info=False)
+            return source_code
+
+    module = cst.parse_module(source_code)
     try:
         module = module.visit(
             ReplaceStringWithGettext(
@@ -95,7 +135,7 @@ def transform(
         return module.code
     except AttributeError as e:
         logging.error("Problem with source, fix this manually", e, exc_info=False)
-        return source
+        return source_code
 
 
 def main():
@@ -119,9 +159,16 @@ def main():
         help="Translates only the given po file",
         action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        "-ho",
+        "--html-files-only",
+        default=False,
+        help="Parse only html files",
+        action=argparse.BooleanOptionalAction,
+    )
 
     args = parser.parse_args()
-    py_files = []
+    files = []
 
     if args.translate_only:
         if not args.po_file:
@@ -130,13 +177,18 @@ def main():
         translate_po_file(args.po_file, args.language)
         return
 
-    for root, dirs, files in os.walk(args.directory):
-        py_files.extend(
+    if args.html_files_only and not args.directory:
+        raise ValueError("You must provide a directory to search for html files")
+
+    for root, dirs, dir_files in os.walk(args.directory):
+        filetype = ".html" if args.html_files_only else ".py"
+        files.extend(
             os.path.join(root, name)
-            for name in files
-            if name.endswith(".py") and "migrations" not in root
+            for name in dir_files
+            if name.endswith(filetype) and "migrations" not in root
         )
-    for file in py_files:
+    for file in files:
+        print(f"{round((files.index(file) / len(files)) * 100)}%", end="\r")
         print("")
         print("-" * 80)
         print(file)
@@ -151,6 +203,7 @@ def main():
                 target_language=args.language,
                 lazy=lazy,
                 inspire_from_po=args.po_file,
+                html_only=args.html_files_only,
             )
 
             f.seek(0)
