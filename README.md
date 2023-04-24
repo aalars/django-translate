@@ -88,3 +88,4 @@ poetry run python update_po.py path/to/your/po/file
 - [ ] Add imports
 - [ ] Replace _() with respective gettext function
 - [ ] Do not save translations in the dictionary with double quotes, use `ast.literal_eval(string)`
+- [ ] Update doc to reflect the changes (update_po_from_another_po.py, ...)
