@@ -57,12 +57,16 @@ def translate_deepl(text, target_lang):
         response_dict = json.loads(response.content.decode())
         # Here we assume that target_lang is EN, so if the detected language is EN, then we translate again with
         # target_lang=ET
-        if (
-            response_dict["translations"][0]["detected_source_language"]
-            == target_lang
-            == "EN"
-        ):
-            return translate_deepl(text, "ET")
+        # TODO: Investigate why we wanted to do this? I assume if the source language is same as target language, then
+        #  we probably made a mistake, and shouldv'e added different language code. But "translating" into same language
+        #  could be beneficial if we just wanted to fill the "msgstr" field with same values as "msgid". Although, we
+        #  could've just done that with polib.
+        # if (
+        #     response_dict["translations"][0]["detected_source_language"]
+        #     == target_lang
+        #     == "EN"
+        # ):
+        #     return translate_deepl(text, "ET")
 
         return response_dict["translations"][0]["text"], target_lang
     else:
